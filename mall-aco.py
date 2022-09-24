@@ -56,31 +56,23 @@ def draw_pheromone(ax, paths):
         coord_x = [from_coord[0], to_coord[0]]
         coord_y = [from_coord[1], to_coord[1]]
         lines.append(ax.plot(coord_x, coord_y, c='k',
-                     linewidth=path.pheromone**2))
+                     linewidth=path.pheromone**(1/5)))
     return lines
 
 
 class Point:  # need to check again because this might be class for points, and not all points are shops
     def __init__(self, name, pheromone=0):  # add category
         self.name = name
-        #self.category = category
         self.paths = []
         self.coordinates = []
-        # self.pheromone = pheromone
-        # self.cost = 1
+        #self.category = category
 
     def set_coordinates(self, coordinates):
         self.coordinates = coordinates
 
-    # def get_coordinates(self):
-    #     return self.coordinates
-
     def add_path(self, path):
         if path not in self.paths:
             self.paths.append(path)
-
-    # def set_cost(self, cost):
-    #     self.cost = cost
 
     # def calculate_cost(self, coordinates):
     #     self.cost = math.hypot(self.coordinates[0] - coordinates[0], self.coordinates[1] - coordinates[1])
@@ -90,29 +82,24 @@ class Path:
     def __init__(self, connected_points, cost=1, pheromone=0):
         self.connected_points = connected_points
         self.cost = cost
-        #self.cost = cost
-        # distance between two points
-        #self.cost = math.hypot(connected_points[1][0] - connected_points[0][0], connected_points[1][1] - connected_points[0][1])
-        #self.cost = sqrt( (connected_points[1][0] - connected_points[0][0])**2 + (connected_points[1][1] - connected_points[0][1])**2 )
         self.pheromone = pheromone
 
-        def set_pheromone(self, pheromone):
-            self.pheromone = pheromone
+    def set_pheromone(self, pheromone):
+        self.pheromone = pheromone
 
-        # update the pheromone on the path
-        def evaporate_pheromone(self, rho):
-            self.pheromone *= (1-rho) * self.pheromone
+    # update the pheromone on the path
+    def evaporate_pheromone(self, rho):
+        self.pheromone *= (1-rho) * self.pheromone
 
-        def deposit_pheromone(self, ants):
-            deposited_pheromone = 0
-            for ant in ants:
-                if self in ant.road:
-                    deposited_pheromone += 5/ant.get_road_length()**1
-                    # deposited_pheromone += 5/ant.get_road_length()
-            self.pheromone += deposited_pheromone
-
-        def get_connected_points(self):
-            return self.connected_points
+    def deposit_pheromone(self, ants):
+        deposited_pheromone = 0
+        for ant in ants:
+            if self in ant.road:
+                deposited_pheromone += 1/ant.get_road_length()
+        self.pheromone += deposited_pheromone
+        
+    def set_cost(self, cost):
+        self.cost = cost
 
 
 class Ant:
@@ -120,52 +107,46 @@ class Ant:
         self.points = []  # the sequence of points that the ant goes through
         self.road = []  # the sequence of paths that the and utilises
 
-        def get_road(self, origin, destination, alpha):
-            # appending the origin point to the self.points
-            self.points.append(origin)
-            # checking if the last point is not the destination then the search for the next point to travel to proceeds
-            while self.points[-1] is not destination:
-                if len(self.road) > 0:
-                    available_paths = [
-                        p for p in self.points[-1].paths if p is not self.road[-1]]
-                else:
-                    available_paths = self.points[-1].paths
-                if len(available_paths) == 0:
-                    available_paths = [self.road[-1]]
-                pheromones_alpha = [p.pheromone **
-                                    alpha for p in available_paths]
-                probabilities = [pa/sum(pheromones_alpha)
-                                 for pa in pheromones_alpha]
-                acc_probabilities = [sum(probabilities[:i+1])
-                                     for i, p in enumerate(probabilities)]
-                chosen_value = random.random()
+    def get_road(self, origin, destination, alpha):
+        # appending the origin point to the self.points
+        self.points.append(origin)
+        
+        # checking if the last point is not the destination then the search for the next point to travel to proceeds
+        recent_point = self.points[-1]
+        while recent_point != destination:
+            connected_paths = recent_point.paths
+            
+            pheromone_sum_w_alpha = sum([path.pheromone * alpha for path in connected_paths]) # can make this power of alpha
+            probabilities_ls = [(alpha * path.pheromone) / pheromone_sum_w_alpha for path in connected_paths]
+            selectedPath = random.choices(population=connected_paths, weights=probabilities_ls)[0]
+            if selectedPath.connected_points[0] == recent_point:
+                recent_point = selectedPath.connected_points[1]
+            else:
+                recent_point = selectedPath.connected_points[0]
+            
+            self.points.append(recent_point)
+            self.road.append(selectedPath)
+            
+        # removing loopy path after reaching destination, by removing loops/repeated points within existing path (self.cities)
+        # the points and the corresponding paths between the repetition will be removed
+        # removing loopy path
+        while len(set(self.points)) != len(self.points):
+            for i, point in enumerate(set(self.points)):
+                point_indices = [i for i, x in enumerate(
+                    self.points) if x == point]
+                if len(point_indices) > 1:
+                    self.points = self.points[:point_indices[0]
+                                              ] + self.points[point_indices[-1]:]
+                    self.road = self.road[:point_indices[0]
+                                          ] + self.road[point_indices[-1]:]
+                    break
 
-                for ai, ap in enumerate(acc_probabilities):
-                    if ap > chosen_value:
-                        break
-                self.road.append(available_paths[ai])
-                if self.road[-1].connected_points[0] is self.points[-1]:
-                    self.points.append(self.road[-1].connected_points[1])
-                else:
-                    self.points.append(self.road[-1].connected_points[0])
-            # removing loopy path
-            while len(set(self.points)) != len(self.points):
-                for i, point in enumerate(set(self.points)):
-                    point_indices = [i for i, x in enumerate(
-                        self.points) if x == point]
-                    if len(point_indices) > 1:
-                        self.points = self.points[:point_indices[0]
-                                                  ] + self.points[point_indices[-1]:]
-                        self.road = self.road[:point_indices[0]
-                                              ] + self.road[point_indices[-1]:]
-                        break
+    def get_road_length(self):
+        return sum([path.cost for path in self.road])
 
-        def get_road_length(self):
-            return sum([path.cost for path in self.road])
-
-        def reset(self):
-            self.points = []
-            self.road = []
+    def reset(self):
+        self.points = []
+        self.road = []
 
 
 def get_frequency_of_roads(ants):
@@ -191,17 +172,16 @@ def get_percentage_of_dominant_road(ants):
         percentage = max(frequencies)/sum(frequencies)
     return percentage
 
-
 if __name__ == "__main__":
     points = {}
 
-    grid = np.zeros([3, 3]) * -1
-    a, b = grid.shape
-    # print(a)
-    # print(b)
+    grid = np.zeros([3, 3])
+    nrow, ncol = grid.shape
+    nrow -= 1
+    ncol -= 1
 
-    for x in range(a):
-        for y in range(b):
+    for x in range(nrow + 1):
+        for y in range(ncol + 1):
             grid[x, y] = str(x) + str(y)
             points[str(x) + str(y)] = Point(str(x) + str(y))
             points[str(x) + str(y)].set_coordinates([x, y])
@@ -209,41 +189,36 @@ if __name__ == "__main__":
     paths = []
 
     # instantiating paths between cells (need to change 2 to a and b)
-    for x in range(a):
-        for y in range(b):
-            # print(str(x)+str(y))
-            if x != 2:  # horizontal direction
+    for x in range(nrow + 1):
+        for y in range(ncol + 1):
+            if x != nrow:  # horizontal direction
                 path = Path(
                     [points[str(x)+str(y)], points[str(x + 1) + str(y)]])
                 points[str(x)+str(y)].add_path(path)
                 points[str(x + 1)+str(y)].add_path(path)
                 paths.append(path)
 
-            # print(str(x)+str(y))
-
-            if y != 2:  # vertical direction
+            if y != ncol:  # vertical direction
                 path = Path(
                     [points[str(x)+str(y)], points[str(x) + str(y + 1)]])
                 points[str(x)+str(y)].add_path(path)
                 points[str(x)+str(y + 1)].add_path(path)
                 paths.append(path)
 
-            if (y != 2) and (x != 2):  # bottom-right diagonal direction
+            if (y != ncol) and (x != nrow):  # bottom-right diagonal direction
                 path = Path(
-                    [points[str(x)+str(y)], points[str(x + 1) + str(y + 1)]])
+                    [points[str(x)+str(y)], points[str(x + 1) + str(y + 1)]], 1.412)
                 points[str(x)+str(y)].add_path(path)
                 points[str(x + 1)+str(y + 1)].add_path(path)
                 paths.append(path)
 
             # upwards top-right diagonal direction
-            if (x != 0) and (y != 2):
+            if (x != 0) and (y != ncol):
                 path = Path(
-                    [points[str(x)+str(y)], points[str(x - 1) + str(y + 1)]])
+                    [points[str(x)+str(y)], points[str(x - 1) + str(y + 1)]], 1.412)
                 points[str(x)+str(y)].add_path(path)
                 points[str(x - 1) + str(y + 1)].add_path(path)
                 paths.append(path)
-
-    # print(path.get_connected_points("00"))
 
     origin = points["10"]
     destination = points["22"]
@@ -253,26 +228,25 @@ if __name__ == "__main__":
     initial_pheromone = 0.001
 
     for path in paths:
-        # path.set_pheromone(initial_pheromone)
-        path.pheromone = initial_pheromone
+        path.set_pheromone(initial_pheromone)
 
     ants = [Ant() for _ in range(n_ant)]
 
     # Termination criteria to end loop
-    max_iteration = 200
+    max_iteration = 100
     percentage_of_dominant_road = 0.9
 
     iteration = 0
     ax = create_graph(points)
 
     lines = draw_pheromone(ax, paths)
-    while (iteration < max_iteration and get_percentage_of_dominant_road(ants) < percentage_of_dominant_road):
-        # loop through all the ants to identify the path of each ant
+    while ((iteration < max_iteration) and (get_percentage_of_dominant_road(ants) < percentage_of_dominant_road)):
+        print("Iteration: {0}\tPercentage: {1}".format(iteration, get_percentage_of_dominant_road(ants)))
+        # looping through ants to find each ant's path
+        
         for ant in ants:
             # reset the path of the ant
-            # ant.reset() # for some reason reset function not working, recognising as attribute
-            ant.points = []
-            ant.road = []
+            ant.reset()
 
             # identify the path of the ant
             ant.get_road(origin, destination, alpha)
@@ -287,14 +261,14 @@ if __name__ == "__main__":
         for l in lines:
             del l
         lines = draw_pheromone(ax, paths)
-        plt.pause(0.05)
+        plt.pause(2) # lower to make it faster
         # increase iteration count
         iteration += 1
 
     # after exiting the loop, return the most occurred path as the solution
     [freq, roads, points_used] = get_frequency_of_roads(ants)
     print([p.name for p in points_used[freq.index(max(freq))]])
-    input()
+    plt.show()
 
     # to set coordinates for shops
     # for coord1, coord2, name in shop_list:
@@ -302,18 +276,3 @@ if __name__ == "__main__":
     #     points[name].set_coordinates([coord1, coord2])
 
     # print(points["10"].get_coordinates())
-
-    # for point1, point2, cost in step_cost:
-    #   road = Road([cities[city1], cities[city2]], cost)
-    #   cities[city1].add_road(road)
-    #   cities[city2].add_road(road)
-    #   roads.append(road)
-
-    # for city1, city2, cost in step_cost:
-    #   road = Road([cities[city1], cities[city2]], cost)
-    #   cities[city1].add_road(road)
-    #   cities[city2].add_road(road)
-    #   roads.append(road)
-
-    # origin = cities['Arad']
-    # destination = cities['Bucharest']
