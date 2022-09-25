@@ -1,40 +1,46 @@
 import random
 import numpy as np
-# import math
 import matplotlib.pyplot as plt
 
-shop_list = [  # [x,y, name]
-    [0, 0, "A"],
-    [1, 1, "B"],
-    [0, 2, "C"],
-    [2, 0, "D"],
-    [2, 2, "E"]
-]
+store_list = [  #arranged by row
+    [0, 0, "Uniqlo", "Clothing", ""],
+    [2, 0, "Funscape Arcade", "Arcade", ""],
+    [4, 0, "Machines", "Tech Store", ""],
+    [6, 0, "Dominos Pizza", "Restaurant", ""],
+    [1, 1, "Korean BBQ", "Restaurant", "non-halal"],
+    [3, 1, "Prada", "Clothing", "luxury"],
+    [5, 1, "Pets At Home", "Pet Shop", "Pet Shop"],
+    [0, 2, "Borders Books", "Bookstore", ""],
+    [2, 2, "Jaya Grocer", "Supermarket", ""],
+    [4, 2, "Kyochon Chicken", "Restaurant", ""],
+    [6, 2, "Cotton On", "Clothing", ""],
+    ]
 
-shop_list3 = [  # [x,y,category, name]
-    [0, 0, "Halal Restaurant", "A"],
-    [1, 1, "Luxury Clothing", "B"],
-    [0, 2, "Normal Clothing", "C"],
-    [2, 0, "Arcade", "D"],
-    [2, 2, "Tech", "E"]
-]
 
-shop_list2 = {
-    "s0": ["A", "Halal Restaurant", (0, 0)],
-    "s1": ["B", "Luxury Clothing", (1, 1)],
-    "s2": ["C", "Normal Clothing", "luxury", (0, 2)],
-    "s3": ["D", "Arcade", (2, 0)],
-    "s4": ["E", "Tech", (2, 2)]
-}
+# shop_list3 = [  # [x,y,category, name]
+#     [0, 0, "Halal Restaurant", "A"],
+#     [1, 1, "Luxury Clothing", "B"],
+#     [0, 2, "Normal Clothing", "C"],
+#     [2, 0, "Arcade", "D"],
+#     [2, 2, "Tech", "E"]
+# ]
 
-entrance_exit = [
-    [0, 1, "Exit A"]
-]
+# shop_list2 = {
+#     "s0": ["A", "Halal Restaurant", (0, 0)],
+#     "s1": ["B", "Luxury Clothing", (1, 1)],
+#     "s2": ["C", "Normal Clothing", "luxury", (0, 2)],
+#     "s3": ["D", "Arcade", (2, 0)],
+#     "s4": ["E", "Tech", (2, 2)]
+# }
 
-entrance_exit2 = {
-    "e0": ["Exit A", (0, 1)],
-    "e1": ["Exit B", (6, 1)]
-}
+# entrance_exit = [
+#     [0, 1, "Exit A"]
+# ]
+
+# entrance_exit2 = {
+#     "e0": ["Exit A", (0, 1)],
+#     "e1": ["Exit B", (6, 1)]
+# }
 
 
 def create_graph(points):
@@ -45,6 +51,12 @@ def create_graph(points):
     ax.scatter(points_x, points_y)
     ax.set_aspect(aspect=1.0)
     ax.invert_yaxis()
+    
+    for i, (key, value) in enumerate(points.items()):
+        remark = f" *{value.tag}" if value.tag != "" else ""
+        label = f"{key}\n{value.category}{remark}"
+        ax.annotate(label, (points_x[i], points_y[i]))
+    
     return ax
 
 
@@ -65,15 +77,21 @@ class Point:  # need to check again because this might be class for points, and 
         self.name = name
         self.paths = []
         self.coordinates = []
-        #self.category = category
+        self.category = ""
+        self.tag = ""
 
-    def set_coordinates(self, coordinates):
+    def set_coordinates(self, coordinates): 
         self.coordinates = coordinates
+        
+        
+    def set_category_tag(self, category, tag):
+        self.category = category
+        self.tag = tag
 
     def add_path(self, path):
         if path not in self.paths:
             self.paths.append(path)
-
+            
     # def calculate_cost(self, coordinates):
     #     self.cost = math.hypot(self.coordinates[0] - coordinates[0], self.coordinates[1] - coordinates[1])
 
@@ -115,7 +133,7 @@ class Ant:
         recent_point = self.points[-1]
         while recent_point != destination:
             connected_paths = recent_point.paths
-            
+    
             pheromone_sum_w_alpha = sum([path.pheromone * alpha for path in connected_paths]) # can make this power of alpha
             probabilities_ls = [(alpha * path.pheromone) / pheromone_sum_w_alpha for path in connected_paths]
             selectedPath = random.choices(population=connected_paths, weights=probabilities_ls)[0]
@@ -173,55 +191,79 @@ def get_percentage_of_dominant_road(ants):
     return percentage
 
 if __name__ == "__main__":
+    plt.close('all')
     points = {}
 
-    grid = np.zeros([3, 3])
+    grid = np.zeros([7,3])
     nrow, ncol = grid.shape
-    nrow -= 1
-    ncol -= 1
-
-    for x in range(nrow + 1):
-        for y in range(ncol + 1):
-            grid[x, y] = str(x) + str(y)
-            points[str(x) + str(y)] = Point(str(x) + str(y))
-            points[str(x) + str(y)].set_coordinates([x, y])
-
     paths = []
+      
+    for x, y, name, category, tag in store_list:
+        points[name] = Point(name)
+        points[name].set_coordinates([x,y])
+        points[name].set_category_tag(category, tag)
+        grid[x,y] = str(x) + str(y) #check
+        
 
-    # instantiating paths between cells (need to change 2 to a and b)
-    for x in range(nrow + 1):
-        for y in range(ncol + 1):
-            if x != nrow:  # horizontal direction
+    pointDict = points.copy()
+    
+    
+    for key, val in points.items():
+        pointDict.pop(key)  #doesnt draw again
+        currentX = val.coordinates[0]
+        currentY = val.coordinates[1]
+        horizontalPoints = [i for i in pointDict if pointDict[i].coordinates[1] == currentY]
+        verticalPoints = [i for i in pointDict if pointDict[i].coordinates[0] == currentX]
+        btDiagonals = [i for i in pointDict if pointDict[i].coordinates[0] == currentX+1 and pointDict[i].coordinates[1] == currentY+1]
+        trDiagonals = [i for i in pointDict if pointDict[i].coordinates[0] == currentX-1 and pointDict[i].coordinates[1] == currentY+1]
+        
+        #horizontal direction 
+        if currentX < nrow:   
+            for p in horizontalPoints:
+                # path = Path(
+                #         [str(currentX)+str(currentY) , str(points[p].coordinates[0])+str(points[p].coordinates[1])])
                 path = Path(
-                    [points[str(x)+str(y)], points[str(x + 1) + str(y)]])
-                points[str(x)+str(y)].add_path(path)
-                points[str(x + 1)+str(y)].add_path(path)
+                        [points[key] , points[p]])
+                points[key].add_path(path)
+                points[p].add_path(path)
+                paths.append(path)
+                
+        #vertical direction
+        if currentY < ncol:   
+            for p in verticalPoints:
+                # path = Path(
+                #         [str(currentX)+str(currentY) , str(points[p].coordinates[0])+str(points[p].coordinates[1])])
+                path = Path(
+                        [points[key] , points[p]])
+                points[key].add_path(path)
+                points[p].add_path(path)
+                paths.append(path)
+            
+        # bottom-right diagonal direction
+        if currentX < nrow and currentY < ncol:
+            for p in btDiagonals:
+                # path = Path([str(currentX)+str(currentY), str(points[p].coordinates[0])+str(points[p].coordinates[1])], 1.412)
+                path = Path(
+                        [points[key] , points[p]], 1.412)
+                points[key].add_path(path)
+                points[p].add_path(path)
+                paths.append(path)
+       
+        #top-right diagonal direction
+        if currentX != 0 and currentY < ncol:
+            for p in trDiagonals:
+                # path = Path([str(currentX)+str(currentY), str(points[p].coordinates[0])+str(points[p].coordinates[1])], 1.412)
+                path = Path(
+                        [points[key] , points[p]], 1.412)
+                points[key].add_path(path)
+                points[p].add_path(path)
                 paths.append(path)
 
-            if y != ncol:  # vertical direction
-                path = Path(
-                    [points[str(x)+str(y)], points[str(x) + str(y + 1)]])
-                points[str(x)+str(y)].add_path(path)
-                points[str(x)+str(y + 1)].add_path(path)
-                paths.append(path)
 
-            if (y != ncol) and (x != nrow):  # bottom-right diagonal direction
-                path = Path(
-                    [points[str(x)+str(y)], points[str(x + 1) + str(y + 1)]], 1.412)
-                points[str(x)+str(y)].add_path(path)
-                points[str(x + 1)+str(y + 1)].add_path(path)
-                paths.append(path)
 
-            # upwards top-right diagonal direction
-            if (x != 0) and (y != ncol):
-                path = Path(
-                    [points[str(x)+str(y)], points[str(x - 1) + str(y + 1)]], 1.412)
-                points[str(x)+str(y)].add_path(path)
-                points[str(x - 1) + str(y + 1)].add_path(path)
-                paths.append(path)
-
-    origin = points["10"]
-    destination = points["22"]
+    origin = points["Uniqlo"]
+    destination = points["Prada"]
+    
     n_ant = 10
     alpha = 1
     rho = 0.1
@@ -270,9 +312,5 @@ if __name__ == "__main__":
     print([p.name for p in points_used[freq.index(max(freq))]])
     plt.show()
 
-    # to set coordinates for shops
-    # for coord1, coord2, name in shop_list:
-    #     points[name] = Point(name)
-    #     points[name].set_coordinates([coord1, coord2])
 
-    # print(points["10"].get_coordinates())
+
