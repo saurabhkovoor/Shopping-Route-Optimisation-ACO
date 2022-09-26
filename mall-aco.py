@@ -2,45 +2,44 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 
+# store_list = [  #arranged by row
+#     [0, 0, "Uniqlo", "Clothing", ""],
+#     [2, 0, "Funscape Arcade", "Arcade", ""],
+#     [4, 0, "Machines", "Tech Store", ""],
+#     [6, 0, "Dominos Pizza", "Restaurant", ""],
+#     [1, 1, "Korean BBQ", "Restaurant", "non-halal"],
+#     [3, 1, "Prada", "Clothing", "luxury"],
+#     [5, 1, "Pets At Home", "Pet Shop", "Pet Shop"],
+#     [0, 2, "Borders Books", "Bookstore", ""],
+#     [2, 2, "Jaya Grocer", "Supermarket", ""],
+#     [4, 2, "Kyochon Chicken", "Restaurant", ""],
+#     [6, 2, "Cotton On", "Clothing", ""],
+#     ]
+
+
 store_list = [  #arranged by row
     [0, 0, "Uniqlo", "Clothing", ""],
+    [1, 0, "1,0", "-", ""],
     [2, 0, "Funscape Arcade", "Arcade", ""],
+    [3, 0, "3,0", "-", ""],
     [4, 0, "Machines", "Tech Store", ""],
+    [5, 0, "5,0", "-", ""],
     [6, 0, "Dominos Pizza", "Restaurant", ""],
+    [0, 1, "0, 1", "-", ""],
     [1, 1, "Korean BBQ", "Restaurant", "non-halal"],
+    [2, 1, "2, 1", "-", ""],
     [3, 1, "Prada", "Clothing", "luxury"],
+    [4, 1, "4, 1", "-", ""],
     [5, 1, "Pets At Home", "Pet Shop", "Pet Shop"],
+    [6, 1, "6, 1", "-", ""],
     [0, 2, "Borders Books", "Bookstore", ""],
+    [1, 2, "1, 2", "-", ""],
     [2, 2, "Jaya Grocer", "Supermarket", ""],
+    [3, 2, "3, 2", "-", ""],
     [4, 2, "Kyochon Chicken", "Restaurant", ""],
+    [5, 2, "5, 2", "-", ""],
     [6, 2, "Cotton On", "Clothing", ""],
     ]
-
-
-# shop_list3 = [  # [x,y,category, name]
-#     [0, 0, "Halal Restaurant", "A"],
-#     [1, 1, "Luxury Clothing", "B"],
-#     [0, 2, "Normal Clothing", "C"],
-#     [2, 0, "Arcade", "D"],
-#     [2, 2, "Tech", "E"]
-# ]
-
-# shop_list2 = {
-#     "s0": ["A", "Halal Restaurant", (0, 0)],
-#     "s1": ["B", "Luxury Clothing", (1, 1)],
-#     "s2": ["C", "Normal Clothing", "luxury", (0, 2)],
-#     "s3": ["D", "Arcade", (2, 0)],
-#     "s4": ["E", "Tech", (2, 2)]
-# }
-
-# entrance_exit = [
-#     [0, 1, "Exit A"]
-# ]
-
-# entrance_exit2 = {
-#     "e0": ["Exit A", (0, 1)],
-#     "e1": ["Exit B", (6, 1)]
-# }
 
 
 def create_graph(points):
@@ -133,6 +132,7 @@ class Ant:
         recent_point = self.points[-1]
         while recent_point != destination:
             connected_paths = recent_point.paths
+           
     
             pheromone_sum_w_alpha = sum([path.pheromone * alpha for path in connected_paths]) # can make this power of alpha
             probabilities_ls = [(alpha * path.pheromone) / pheromone_sum_w_alpha for path in connected_paths]
@@ -145,6 +145,7 @@ class Ant:
             self.points.append(recent_point)
             self.road.append(selectedPath)
             
+           
         # removing loopy path after reaching destination, by removing loops/repeated points within existing path (self.cities)
         # the points and the corresponding paths between the repetition will be removed
         # removing loopy path
@@ -153,10 +154,9 @@ class Ant:
                 point_indices = [i for i, x in enumerate(
                     self.points) if x == point]
                 if len(point_indices) > 1:
-                    self.points = self.points[:point_indices[0]
-                                              ] + self.points[point_indices[-1]:]
-                    self.road = self.road[:point_indices[0]
-                                          ] + self.road[point_indices[-1]:]
+                    self.points = self.points[:point_indices[0]] + self.points[point_indices[-1]:]
+                    self.road = self.road[:point_indices[0]] + self.road[point_indices[-1]:]
+                    # print(self.points)
                     break
 
     def get_road_length(self):
@@ -198,72 +198,52 @@ if __name__ == "__main__":
     grid = np.zeros([7,3])
     nrow, ncol = grid.shape
     paths = []
+    nrow -= 1
+    ncol -=1
       
     for x, y, name, category, tag in store_list:
         points[name] = Point(name)
         points[name].set_coordinates([x,y])
         points[name].set_category_tag(category, tag)
         grid[x,y] = str(x) + str(y) #check
+        # print(grid[x,y])
         
 
     pointDict = points.copy()
     
-    
-    for key, val in points.items():
-        pointDict.pop(key)  #doesnt draw again
-        currentX = val.coordinates[0]
-        currentY = val.coordinates[1]
-        horizontalPoints = [i for i in pointDict if pointDict[i].coordinates[1] == currentY]
-        verticalPoints = [i for i in pointDict if pointDict[i].coordinates[0] == currentX]
-        btDiagonals = [i for i in pointDict if pointDict[i].coordinates[0] == currentX+1 and pointDict[i].coordinates[1] == currentY+1]
-        trDiagonals = [i for i in pointDict if pointDict[i].coordinates[0] == currentX-1 and pointDict[i].coordinates[1] == currentY+1]
-        
-        #horizontal direction 
-        if currentX < nrow:   
-            for p in horizontalPoints:
-                # path = Path(
-                #         [str(currentX)+str(currentY) , str(points[p].coordinates[0])+str(points[p].coordinates[1])])
-                path = Path(
-                        [points[key] , points[p]])
-                points[key].add_path(path)
-                points[p].add_path(path)
+    for x in range(nrow+1):
+        for y in range(ncol+1):
+            currentPoint = [i for i in pointDict if pointDict[i].coordinates[0] == x and pointDict[i].coordinates[1] == y]
+            if x < nrow:
+                nextHoriPoint = [i for i in pointDict if pointDict[i].coordinates[0] == x+1 and pointDict[i].coordinates[1] == y]
+                path = Path([points[currentPoint[0]], points[nextHoriPoint[0]]])
+                points[currentPoint[0]].add_path(path)
+                points[nextHoriPoint[0]].add_path(path)
                 paths.append(path)
                 
-        #vertical direction
-        if currentY < ncol:   
-            for p in verticalPoints:
-                # path = Path(
-                #         [str(currentX)+str(currentY) , str(points[p].coordinates[0])+str(points[p].coordinates[1])])
-                path = Path(
-                        [points[key] , points[p]])
-                points[key].add_path(path)
-                points[p].add_path(path)
+            if y < ncol:
+                nextVertiPoint = [i for i in pointDict if pointDict[i].coordinates[1] == y+1 and pointDict[i].coordinates[0] == x]
+                path = Path([points[currentPoint[0]], points[nextVertiPoint[0]]])
+                points[currentPoint[0]].add_path(path)
+                points[nextVertiPoint[0]].add_path(path)
                 paths.append(path)
-            
-        # bottom-right diagonal direction
-        if currentX < nrow and currentY < ncol:
-            for p in btDiagonals:
-                # path = Path([str(currentX)+str(currentY), str(points[p].coordinates[0])+str(points[p].coordinates[1])], 1.412)
-                path = Path(
-                        [points[key] , points[p]], 1.412)
-                points[key].add_path(path)
-                points[p].add_path(path)
+                
+            if (y < ncol) and (x < nrow):
+                nextbrPoint = [i for i in pointDict if pointDict[i].coordinates[0] == x+1 and pointDict[i].coordinates[1] == y+1]
+                path = Path([points[currentPoint[0]], points[nextbrPoint[0]]],1.412)
+                points[currentPoint[0]].add_path(path)
+                points[nextbrPoint[0]].add_path(path)
                 paths.append(path)
-       
-        #top-right diagonal direction
-        if currentX != 0 and currentY < ncol:
-            for p in trDiagonals:
-                # path = Path([str(currentX)+str(currentY), str(points[p].coordinates[0])+str(points[p].coordinates[1])], 1.412)
-                path = Path(
-                        [points[key] , points[p]], 1.412)
-                points[key].add_path(path)
-                points[p].add_path(path)
+                
+            if (x != 0) and (y < ncol):
+                nexttrPoint = [i for i in pointDict if pointDict[i].coordinates[0] == x-1 and pointDict[i].coordinates[1] == y+1]
+                path = Path([points[currentPoint[0]], points[nexttrPoint[0]]],1.412)
+                points[currentPoint[0]].add_path(path)
+                points[nexttrPoint[0]].add_path(path)
                 paths.append(path)
-
-
 
     origin = points["Uniqlo"]
-    destination = points["Prada"]
+    destination = points["Cotton On"]
     
     n_ant = 10
     alpha = 1
