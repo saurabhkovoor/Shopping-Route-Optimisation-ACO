@@ -179,6 +179,7 @@ def get_frequency_of_roads(ants):
                 roads.append(ant.road)
                 points.append(ant.points)
                 frequencies.append(1)
+                
     return [frequencies, roads, points]
 
 
@@ -311,6 +312,9 @@ if __name__ == "__main__":
     [freq, roads, points_used] = get_frequency_of_roads(ants)
     print([p.name for p in points_used[freq.index(max(freq))]])
     plt.show()
-
-
-
+    
+    cost = 0
+    for g in roads:
+        for r in g:
+            cost += r.cost
+    print("path cost: {}".format(cost))
