@@ -2,36 +2,21 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 
-# store_list = [  #arranged by row
-#     [0, 0, "Uniqlo", "Clothing", ""],
-#     [2, 0, "Funscape Arcade", "Arcade", ""],
-#     [4, 0, "Machines", "Tech Store", ""],
-#     [6, 0, "Dominos Pizza", "Restaurant", ""],
-#     [1, 1, "Korean BBQ", "Restaurant", "non-halal"],
-#     [3, 1, "Prada", "Clothing", "luxury"],
-#     [5, 1, "Pets At Home", "Pet Shop", "Pet Shop"],
-#     [0, 2, "Borders Books", "Bookstore", ""],
-#     [2, 2, "Jaya Grocer", "Supermarket", ""],
-#     [4, 2, "Kyochon Chicken", "Restaurant", ""],
-#     [6, 2, "Cotton On", "Clothing", ""],
-#     ]
-
-
-store_list = [  #arranged by row
+location_list = [  #arranged by row
     [0, 0, "Uniqlo", "Clothing", ""],
-    [1, 0, "1,0", "-", ""],
+    [1, 0, "1, 0", "-", ""],
     [2, 0, "Funscape Arcade", "Arcade", ""],
-    [3, 0, "3,0", "-", ""],
+    [3, 0, "3, 0", "-", ""],
     [4, 0, "Machines", "Tech Store", ""],
-    [5, 0, "5,0", "-", ""],
+    [5, 0, "5, 0", "-", ""],
     [6, 0, "Dominos Pizza", "Restaurant", ""],
-    [0, 1, "0, 1", "-", ""],
+    [0, 1, "Entrance / Exit A", "Exit", ""],
     [1, 1, "Korean BBQ", "Restaurant", "non-halal"],
     [2, 1, "2, 1", "-", ""],
     [3, 1, "Prada", "Clothing", "luxury"],
     [4, 1, "4, 1", "-", ""],
     [5, 1, "Pets At Home", "Pet Shop", "Pet Shop"],
-    [6, 1, "6, 1", "-", ""],
+    [6, 1, "Entrance / Exit B", "Exit", ""],
     [0, 2, "Borders Books", "Bookstore", ""],
     [1, 2, "1, 2", "-", ""],
     [2, 2, "Jaya Grocer", "Supermarket", ""],
@@ -41,20 +26,75 @@ store_list = [  #arranged by row
     [6, 2, "Cotton On", "Clothing", ""],
     ]
 
+def instantiatePoints(grid):
+    points = {}
+    for x, y, name, category, tag in location_list:
+        points[name] = Point(name)
+        points[name].set_coordinates([x,y])
+        points[name].set_category_tag(category, tag)
+        grid[x,y] = str(x) + str(y) 
+    return points
+
+def instantiatePaths(nrow, ncol, points):
+    paths = []
+    for x in range(nrow):
+        for y in range(ncol):
+            currentPoint = [i for i in points if points[i].coordinates[0] == x and points[i].coordinates[1] == y]
+            #nrow-1 and ncol-1 = avoid border Points
+            if x < (nrow-1):    #Horizontal direction
+                nextHoriPoint = [i for i in points if points[i].coordinates[0] == x+1 and points[i].coordinates[1] == y]
+                path = Path([points[currentPoint[0]], points[nextHoriPoint[0]]])
+                points[currentPoint[0]].add_path(path)
+                points[nextHoriPoint[0]].add_path(path)
+                paths.append(path)
+                
+            if y < (ncol-1):    #Vertical direction
+                nextVertiPoint = [i for i in points if points[i].coordinates[1] == y+1 and points[i].coordinates[0] == x]
+                path = Path([points[currentPoint[0]], points[nextVertiPoint[0]]])
+                points[currentPoint[0]].add_path(path)
+                points[nextVertiPoint[0]].add_path(path)
+                paths.append(path)
+                
+            if y < (ncol-1) and x < (nrow-1):   #Bottom right diagonal
+                nextbrPoint = [i for i in points if points[i].coordinates[0] == x+1 and points[i].coordinates[1] == y+1]
+                path = Path([points[currentPoint[0]], points[nextbrPoint[0]]],1.412)
+                points[currentPoint[0]].add_path(path)
+                points[nextbrPoint[0]].add_path(path)
+                paths.append(path)
+                
+            if x != 0 and y < (ncol-1):     #Top right diagonal
+                nexttrPoint = [i for i in points if points[i].coordinates[0] == x-1 and points[i].coordinates[1] == y+1]
+                path = Path([points[currentPoint[0]], points[nexttrPoint[0]]],1.412)
+                points[currentPoint[0]].add_path(path)
+                points[nexttrPoint[0]].add_path(path)
+                paths.append(path)
+    return paths
 
 def create_graph(points):
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
-    points_x = [point.coordinates[0] for key, point in points.items()]
-    points_y = [point.coordinates[1] for key, point in points.items()]
-    ax.scatter(points_x, points_y)
+    points_x = [point.coordinates[0] for point in points.values() if point.category != "-" and point.category != "Exit"]
+    points_y = [point.coordinates[1] for point in points.values() if point.category != "-" and point.category != "Exit"]
+    e_x = [point.coordinates[0] for point in points.values() if point.category == "Exit" ]
+    e_y = [point.coordinates[1] for point in points.values() if point.category == "Exit" ]
+
+    ax.scatter(points_x, points_y, marker = '^')
+    ax.scatter(e_x, e_y, marker = 'x', color='r')
     ax.set_aspect(aspect=1.0)
     ax.invert_yaxis()
+    ax.set_yticks(points_y)
     
-    for i, (key, value) in enumerate(points.items()):
-        remark = f" *{value.tag}" if value.tag != "" else ""
-        label = f"{key}\n{value.category}{remark}"
+    #plot store and exit points only
+    shopPoints = [point.name for point in points.values() if point.category != "-" and point.category != "Exit"]
+    exitPoints = [point.name for point in points.values() if point.category == "Exit"]
+    
+    for i, p in enumerate(shopPoints):
+        remark = f" *{points[p].tag}" if points[p].tag != "" else ""
+        label = f"{p}\n({points[p].category}){remark}"
         ax.annotate(label, (points_x[i], points_y[i]))
+    
+    for i, p in enumerate(exitPoints):
+        ax.annotate(points[p].name, (e_x[i], e_y[i]))
     
     return ax
 
@@ -132,8 +172,6 @@ class Ant:
         recent_point = self.points[-1]
         while recent_point != destination:
             connected_paths = recent_point.paths
-           
-    
             pheromone_sum_w_alpha = sum([path.pheromone * alpha for path in connected_paths]) # can make this power of alpha
             probabilities_ls = [(alpha * path.pheromone) / pheromone_sum_w_alpha for path in connected_paths]
             selectedPath = random.choices(population=connected_paths, weights=probabilities_ls)[0]
@@ -145,7 +183,7 @@ class Ant:
             self.points.append(recent_point)
             self.road.append(selectedPath)
             
-           
+          
         # removing loopy path after reaching destination, by removing loops/repeated points within existing path (self.cities)
         # the points and the corresponding paths between the repetition will be removed
         # removing loopy path
@@ -179,7 +217,6 @@ def get_frequency_of_roads(ants):
                 roads.append(ant.road)
                 points.append(ant.points)
                 frequencies.append(1)
-                
     return [frequencies, roads, points]
 
 
@@ -191,57 +228,51 @@ def get_percentage_of_dominant_road(ants):
         percentage = max(frequencies)/sum(frequencies)
     return percentage
 
+
+def freeTravel(points):
+    isInputValid = False 
+    print("\033[4mPlease enter at least 5 shops to visit:\033[0m")
+    print("*enter shop number separated by commas")
+    shops = [p for p, val in points.items() if val.category != "-"]
+    for i, p in enumerate(shops):
+        print(f"{i} - {p}")
+        
+    while not isInputValid:
+        try:
+            inputString = set(map(int, input().split(",")))
+            assert len(inputString) >= 5
+            isInputValid = True
+        except ValueError:
+                print("Please enter shop number only")
+        except AssertionError:
+            print("Please enter at least 5 shops\n")
+    return inputString
+            
+
 if __name__ == "__main__":
     plt.close('all')
-    points = {}
-
     grid = np.zeros([7,3])
     nrow, ncol = grid.shape
-    paths = []
-    nrow -= 1
-    ncol -=1
-      
-    for x, y, name, category, tag in store_list:
-        points[name] = Point(name)
-        points[name].set_coordinates([x,y])
-        points[name].set_category_tag(category, tag)
-        grid[x,y] = str(x) + str(y) #check
-        # print(grid[x,y])
-        
-
-    pointDict = points.copy()
+    points = instantiatePoints(grid)
+    paths = instantiatePaths(nrow, ncol, points)
+    isMenuValid = False
     
-    for x in range(nrow+1):
-        for y in range(ncol+1):
-            currentPoint = [i for i in pointDict if pointDict[i].coordinates[0] == x and pointDict[i].coordinates[1] == y]
-            if x < nrow:
-                nextHoriPoint = [i for i in pointDict if pointDict[i].coordinates[0] == x+1 and pointDict[i].coordinates[1] == y]
-                path = Path([points[currentPoint[0]], points[nextHoriPoint[0]]])
-                points[currentPoint[0]].add_path(path)
-                points[nextHoriPoint[0]].add_path(path)
-                paths.append(path)
-                
-            if y < ncol:
-                nextVertiPoint = [i for i in pointDict if pointDict[i].coordinates[1] == y+1 and pointDict[i].coordinates[0] == x]
-                path = Path([points[currentPoint[0]], points[nextVertiPoint[0]]])
-                points[currentPoint[0]].add_path(path)
-                points[nextVertiPoint[0]].add_path(path)
-                paths.append(path)
-                
-            if (y < ncol) and (x < nrow):
-                nextbrPoint = [i for i in pointDict if pointDict[i].coordinates[0] == x+1 and pointDict[i].coordinates[1] == y+1]
-                path = Path([points[currentPoint[0]], points[nextbrPoint[0]]],1.412)
-                points[currentPoint[0]].add_path(path)
-                points[nextbrPoint[0]].add_path(path)
-                paths.append(path)
-                
-            if (x != 0) and (y < ncol):
-                nexttrPoint = [i for i in pointDict if pointDict[i].coordinates[0] == x-1 and pointDict[i].coordinates[1] == y+1]
-                path = Path([points[currentPoint[0]], points[nexttrPoint[0]]],1.412)
-                points[currentPoint[0]].add_path(path)
-                points[nexttrPoint[0]].add_path(path)
-                paths.append(path)
-
+    # while not isMenuValid:
+    #     menuInput = input("Enter menu selection: \n1 - Free travel (no constraints)\n2 - Travel with constraints\n")
+    #     try: 
+    #         menuN = int(menuInput)
+    #         if (menuN <= 0 or menuN > 2):
+    #             raise ValueError
+    #         else:
+    #             if menuN == 1:
+    #                 shopInput = freeTravel(points)
+    #                 print(shopInput)
+    #                 isMenuValid = True
+    #     except ValueError:
+    #         print("Please enter a valid selection")
+    
+    
+    
     origin = points["Uniqlo"]
     destination = points["Cotton On"]
     
@@ -266,11 +297,9 @@ if __name__ == "__main__":
     while ((iteration < max_iteration) and (get_percentage_of_dominant_road(ants) < percentage_of_dominant_road)):
         print("Iteration: {0}\tPercentage: {1}".format(iteration, get_percentage_of_dominant_road(ants)))
         # looping through ants to find each ant's path
-        
         for ant in ants:
             # reset the path of the ant
             ant.reset()
-
             # identify the path of the ant
             ant.get_road(origin, destination, alpha)
 
@@ -292,9 +321,10 @@ if __name__ == "__main__":
     [freq, roads, points_used] = get_frequency_of_roads(ants)
     print([p.name for p in points_used[freq.index(max(freq))]])
     plt.show()
-    
+
     cost = 0
     for g in roads:
         for r in g:
             cost += r.cost
     print("path cost: {}".format(cost))
+
