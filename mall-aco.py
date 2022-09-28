@@ -283,17 +283,10 @@ def aco(points, paths, origin, destination, costs):
     costs.append(cost)
     return travelRoute
 
-
-def freeTravel(points, paths):
+def validateInput():
     isInputValid = False 
-    print("\033[4mPlease enter at least 5 shops to visit:\033[0m")
-    print("*enter shop number separated by commas")
-    shops = [p for p, val in points.items() if val.category != "EE" and val.category != "-"]
-    for i, p in enumerate(shops):
-        print(f"{i} - {p}")
-        
     while not isInputValid:
-        try:
+        try: 
             inputString = set(map(int, input().split(",")))
             assert len(inputString) >= 5
             #stores selected Point object
@@ -304,48 +297,119 @@ def freeTravel(points, paths):
             for i in selectedShopNames:
                 print(i)
             print("")
-            inFirstHalf = all(x.coordinates[0] <= 3 for x in selectedShops) #returns true or false
-            inSecondHalf = all(x.coordinates[0] >= 3 for x in selectedShops)
-            
-            travelRoute = []
-            costs = []
-            
-            if not inFirstHalf and not inSecondHalf: #in both halves - enter from A, exit from B - user travels from left to right of mall
-                entrance = points["Entrance / Exit A"]
-                ex = points["Entrance / Exit B"]
-            elif inFirstHalf:
-                entrance = points["Entrance / Exit A"]  
-                ex = entrance
-                nextNearest = selectedShops.pop(1)
-                selectedShops.append(nextNearest)
-            else:   #inSecondHalf
-                entrance = points["Entrance / Exit B"]
-                ex = entrance
-                selectedShops.reverse()
-                nextNearest = selectedShops.pop(1)
-                selectedShops.append(nextNearest)
-            
-            selectedShops.insert(0, entrance)
-            selectedShops.append(ex)
-            travelRoute = []
-            for i in range(len(selectedShops) - 1):
-                route = aco(points, paths, selectedShops[i], selectedShops[i+1], costs)
-                if i < (len(selectedShops) - 2):
-                    route.pop(-1)
-                travelRoute.extend(route)  
-                
-       
             isInputValid = True
         except ValueError:
-                print("Please enter shop number only")
+                print("Please enter shop number only\n")
         except AssertionError:
             print("Please enter at least 5 shops\n")
+    return selectedShops, selectedShopNames
+
+def freeTravel(points, paths):
+    selectedShops, selectedShopNames = validateInput()
+    inFirstHalf = all(x.coordinates[0] <= 3 for x in selectedShops) #returns true or false
+    inSecondHalf = all(x.coordinates[0] >= 3 for x in selectedShops)
+    travelRoute = []
+    costs = []
     
+    if not inFirstHalf and not inSecondHalf: #in both halves - enter from A, exit from B - user travels from left to right of mall
+        entrance = points["Entrance / Exit A"]
+        ex = points["Entrance / Exit B"]
+    elif inFirstHalf:
+        entrance = points["Entrance / Exit A"]  
+        ex = entrance
+        nextNearest = selectedShops.pop(1)
+        selectedShops.append(nextNearest)
+    else:   #inSecondHalf
+        entrance = points["Entrance / Exit B"]
+        ex = entrance
+        selectedShops.reverse()
+        nextNearest = selectedShops.pop(1)
+        selectedShops.append(nextNearest)
     
+    selectedShops.insert(0, entrance)
+    selectedShops.append(ex)
+    travelRoute = []
+    for i in range(len(selectedShops) - 1):
+        route = aco(points, paths, selectedShops[i], selectedShops[i+1], costs)
+        if i < (len(selectedShops) - 2):
+            route.pop(-1)
+        travelRoute.extend(route)  
+
     return selectedShopNames, travelRoute, costs
 
+def rearrange(n, selectedShops, rearrangedShops):
+    for i in range(n):
+        closestVal = 6
+        availableShops = [x for x in selectedShops if x not in rearrangedShops]
+        if i == 0:  
+            #list is already sorted
+            #place first value closest to entrance / exit 
+            #place second closest value at the back (wrap around)
+            rearrangedShops[i] = selectedShops[i]
+            rearrangedShops[n-1] = selectedShops[1]
+        elif i < math.floor(n/2):
+            prevValue = rearrangedShops[i-1].coordinates[0]
+            rearrangedShops[i] = getClosestShop(availableShops, closestVal, prevValue) 
+            
+            availableShops = [x for x in selectedShops if x not in rearrangedShops]
+            
+            #From the back
+            closestVal = 6
+            nextValue = rearrangedShops[n-i].coordinates[0]
+            rearrangedShops[n-1-i] = getClosestShop(availableShops, closestVal, nextValue) 
+        elif i == math.floor(n/2) and n % 2 != 0:
+            rearrangedShops[i] = availableShops[0] 
+    return rearrangedShops
 
-                
+def getClosestShop(availableShops, closestVal, prevNext):
+    for s in availableShops:
+        value = s.coordinates[0]
+        if abs(prevNext - value) < closestVal:
+            closestVal = abs(prevNext - value)
+            closestShop = s
+    return closestShop
+
+def fixedEntExit(points, paths):
+    selectedShops, selectedShopNames = validateInput()
+    print("\n\033[4mSelect one as your entrance and exit:\033[0m")
+    print("*enter A or B")
+    entranceExit = [e for e, val in points.items() if val.category == "EE"]
+    for e in entranceExit:
+        print(f"{e[-1]} - {e}")
+    print("")
+    isEntExitValid = False
+    while not isEntExitValid:
+        eeInput = input()
+        try:
+            userInput = str(eeInput)
+            if (userInput.upper() not in ["A", "B"]):
+                raise ValueError 
+            else:
+                n = len(selectedShops)
+                rearrangedShops = [""]*n 
+                travelRoute = []
+                costs = []
+                if userInput.upper() == "A":   
+                    entExit = points["Entrance / Exit A"]
+                    shopArrangement = rearrange(n, selectedShops, rearrangedShops)
+                else:
+                    entExit = points["Entrance / Exit B"]
+                    selectedShops.reverse()
+                    shopArrangement = rearrange(n, selectedShops, rearrangedShops)
+                    
+                shopArrangement.insert(0, entExit)
+                shopArrangement.append(entExit)
+                travelRoute = []
+                for i in range(len(selectedShops) - 1):
+                    route = aco(points, paths, shopArrangement[i], shopArrangement[i+1], costs)
+                    if i < (len(shopArrangement) - 2):
+                        route.pop(-1)
+                    travelRoute.extend(route)  
+                isEntExitValid = True
+        except ValueError:
+            print("Please enter a valid selection\n")
+            
+    return selectedShopNames, travelRoute, costs
 
 if __name__ == "__main__":
     plt.close('all')
@@ -356,27 +420,41 @@ if __name__ == "__main__":
     isMenuValid = False
     
     while not isMenuValid:
-        menuInput = input("Enter menu selection: \n1 - Free travel (no constraints)\n2 - Travel with constraints\n")
+        menuInput = input("Enter menu selection: \n1 - Free travel (no constraints)\n2 - Fixed entrance and exit\n3 - Travel with constraints\n")
         try: 
             menuN = int(menuInput)
-            if (menuN <= 0 or menuN > 2):
+            if (menuN <= 0 or menuN > 3):
                 raise ValueError
             else:
+                print("\n\033[4mPlease enter at least 5 shops to visit:\033[0m")
+                print("*enter shop number separated by commas")
+                shops = [p for p, val in points.items() if val.category != "EE" and val.category != "-"]
+                for i, p in enumerate(shops):
+                    print(f"{i} - {p}")
+                    
                 if menuN == 1:
                     selectedShopNames, travelRoute, costs = freeTravel(points, paths)
                     print("\nPath")
-                    print("~ ", end="")
                     for p in travelRoute:
                         if p in selectedShopNames:
                             print(f"\033[4m{p}\033[0m", end=" ~ ")
                         else:
                             print(p, end=" ~ ")
-                    print("\n")
-                    print(f"Total Cost: {costs}")
+                    print("")
                     print(f"Total Cost: {math.fsum(costs)}")
-                        
-                    
                     isMenuValid = True
+                elif menuN == 2:
+                    selectedShopNames, travelRoute, costs = fixedEntExit(points, paths)
+                    print("\nPath")
+                    for p in travelRoute:
+                        if p in selectedShopNames:
+                            print(f"\033[4m{p}\033[0m", end=" ~ ")
+                        else:
+                            print(p, end=" ~ ")
+                    print("")
+                    print(f"Total Cost: {math.fsum(costs)}")
+                    isMenuValid = True
+                    
         except ValueError:
-            print("Please enter a valid selection")
+            print("Please enter a valid selection\n")
     
