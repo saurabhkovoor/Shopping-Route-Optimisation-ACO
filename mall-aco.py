@@ -1,6 +1,7 @@
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 location_list = [  #arranged by row
     [0, 0, "Uniqlo", "Clothing", ""],
@@ -313,14 +314,17 @@ def freeTravel(points, paths):
                 entrance = points["Entrance / Exit A"]
                 ex = points["Entrance / Exit B"]
             elif inFirstHalf:
-                entrance = points["Entrance / Exit A"]
+                entrance = points["Entrance / Exit A"]  
                 ex = entrance
-            else:
+                nextNearest = selectedShops.pop(1)
+                selectedShops.append(nextNearest)
+            else:   #inSecondHalf
                 entrance = points["Entrance / Exit B"]
                 ex = entrance
+                selectedShops.reverse()
+                nextNearest = selectedShops.pop(1)
+                selectedShops.append(nextNearest)
             
-            nextNearest = selectedShops.pop(1)
-            selectedShops.append(nextNearest)
             selectedShops.insert(0, entrance)
             selectedShops.append(ex)
             travelRoute = []
@@ -329,9 +333,8 @@ def freeTravel(points, paths):
                 if i < (len(selectedShops) - 2):
                     route.pop(-1)
                 travelRoute.extend(route)  
-   
-
-                         
+                
+       
             isInputValid = True
         except ValueError:
                 print("Please enter shop number only")
@@ -369,62 +372,11 @@ if __name__ == "__main__":
                         else:
                             print(p, end=" ~ ")
                     print("\n")
-                    print(f"Total Cost: {sum(x for x in costs)}")
+                    print(f"Total Cost: {costs}")
+                    print(f"Total Cost: {math.fsum(costs)}")
                         
                     
                     isMenuValid = True
         except ValueError:
             print("Please enter a valid selection")
     
-# =============================================================================
-#     origin = points["Uniqlo"]
-#     destination = points["Cotton On"]
-#     
-#     n_ant = 5 #initially was 10
-#     alpha = 1
-#     rho = 0.1
-#     initial_pheromone = 0.001
-# 
-#     for path in paths:
-#         path.set_pheromone(initial_pheromone)
-# 
-#     ants = [Ant() for _ in range(n_ant)]
-# 
-#     # Termination criteria to end loop
-#     max_iteration = 100
-#     percentage_of_dominant_road = 0.9
-# 
-#     iteration = 0
-#     ax = create_graph(points)
-#     lines = draw_pheromone(ax, paths)
-#     while ((iteration < max_iteration) and (get_percentage_of_dominant_road(ants) < percentage_of_dominant_road)):
-#         print("Iteration: {0}\tPercentage: {1}".format(iteration, get_percentage_of_dominant_road(ants)))
-#         # looping through ants to find each ant's path
-#         for ant in ants:
-#             ant.reset()
-#             ant.get_road(origin, destination, alpha)
-# 
-#         # loop through all roads
-#         for path in paths:
-#             path.evaporate_pheromone(rho)
-#             path.deposit_pheromone(ants)
-#         # visualise
-#         for l in lines:
-#             del l
-#         lines = draw_pheromone(ax, paths)
-#         plt.pause(2) # lower to make it faster
-#         # increase iteration count
-#         iteration += 1
-# 
-#     # after exiting the loop, return the most occurred path as the solution
-#     [freq, roads, points_used] = get_frequency_of_roads(ants)
-#     print([p.name for p in points_used[freq.index(max(freq))]])
-#     plt.show()
-# 
-#     cost = 0
-#     for g in roads:
-#         for r in g:
-#             cost += r.cost
-#     print("path cost: {}".format(cost))
-# =============================================================================
-
