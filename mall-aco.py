@@ -10,13 +10,13 @@ location_list = [  #arranged by row
     [4, 0, "Machines", "Tech Store", ""],
     [5, 0, "5, 0", "-", ""],
     [6, 0, "Dominos Pizza", "Restaurant", ""],
-    [0, 1, "Entrance / Exit A", "Exit", ""],
+    [0, 1, "Entrance / Exit A", "EE", ""],
     [1, 1, "Korean BBQ", "Restaurant", "non-halal"],
     [2, 1, "2, 1", "-", ""],
     [3, 1, "Prada", "Clothing", "luxury"],
     [4, 1, "4, 1", "-", ""],
     [5, 1, "Pets At Home", "Pet Shop", "Pet Shop"],
-    [6, 1, "Entrance / Exit B", "Exit", ""],
+    [6, 1, "Entrance / Exit B", "EE", ""],
     [0, 2, "Borders Books", "Bookstore", ""],
     [1, 2, "1, 2", "-", ""],
     [2, 2, "Jaya Grocer", "Supermarket", ""],
@@ -69,35 +69,6 @@ def instantiatePaths(nrow, ncol, points):
                 points[nexttrPoint[0]].add_path(path)
                 paths.append(path)
     return paths
-
-def create_graph(points):
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
-    points_x = [point.coordinates[0] for point in points.values() if point.category != "-" and point.category != "Exit"]
-    points_y = [point.coordinates[1] for point in points.values() if point.category != "-" and point.category != "Exit"]
-    e_x = [point.coordinates[0] for point in points.values() if point.category == "Exit" ]
-    e_y = [point.coordinates[1] for point in points.values() if point.category == "Exit" ]
-
-    ax.scatter(points_x, points_y, marker = '^')
-    ax.scatter(e_x, e_y, marker = 'x', color='r')
-    ax.set_aspect(aspect=1.0)
-    ax.invert_yaxis()
-    ax.set_yticks(points_y)
-    
-    #plot store and exit points only
-    shopPoints = [point.name for point in points.values() if point.category != "-" and point.category != "Exit"]
-    exitPoints = [point.name for point in points.values() if point.category == "Exit"]
-    
-    for i, p in enumerate(shopPoints):
-        remark = f" *{points[p].tag}" if points[p].tag != "" else ""
-        label = f"{p}\n({points[p].category}){remark}"
-        ax.annotate(label, (points_x[i], points_y[i]))
-    
-    for i, p in enumerate(exitPoints):
-        ax.annotate(points[p].name, (e_x[i], e_y[i]))
-    
-    return ax
-
 
 def draw_pheromone(ax, paths):
     lines = []
@@ -228,59 +199,41 @@ def get_percentage_of_dominant_road(ants):
         percentage = max(frequencies)/sum(frequencies)
     return percentage
 
+def create_graph(points):
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    middlePoints = [point.coordinates for point in points.values() if point.category == "-"]
+    entranceExitPoints = [point.coordinates for point in points.values() if point.category == "EE"]   
+    e_x, e_y = [p[0] for p in entranceExitPoints], [p[1] for p in entranceExitPoints]
+    points_x = [point.coordinates[0] for point in points.values() if point.coordinates not in entranceExitPoints and point.coordinates not in middlePoints]
+    points_y = [point.coordinates[1] for point in points.values() if point.coordinates not in entranceExitPoints and point.coordinates not in middlePoints]
 
-def freeTravel(points):
-    isInputValid = False 
-    print("\033[4mPlease enter at least 5 shops to visit:\033[0m")
-    print("*enter shop number separated by commas")
-    shops = [p for p, val in points.items() if val.category != "-"]
-    for i, p in enumerate(shops):
-        print(f"{i} - {p}")
-        
-    while not isInputValid:
-        try:
-            inputString = set(map(int, input().split(",")))
-            assert len(inputString) >= 5
-            isInputValid = True
-        except ValueError:
-                print("Please enter shop number only")
-        except AssertionError:
-            print("Please enter at least 5 shops\n")
-    return inputString
-            
+    ax.scatter(points_x, points_y, marker = '^')
+    ax.scatter(e_x, e_y, marker = 'x', color='r')
+    ax.set_aspect(aspect=1.0)
+    ax.invert_yaxis()
+    ax.set_yticks(points_y)
+    
+    #plot store and exit points only
+    shopPoints = [point.name for point in points.values() if point.coordinates not in entranceExitPoints and point.coordinates not in middlePoints]
+    epoints = [point.name for point in points.values() if point.category == "EE"]
+    
+    for i, p in enumerate(shopPoints):
+        remark = f" *{points[p].tag}" if points[p].tag != "" else ""
+        label = f"{p}\n({points[p].category}){remark}"
+        ax.annotate(label, (points_x[i], points_y[i]))
+    
+    for i, p in enumerate(epoints):
+        ax.annotate(points[p].name, (e_x[i], e_y[i]))
+    
+    return ax
 
-if __name__ == "__main__":
-    plt.close('all')
-    grid = np.zeros([7,3])
-    nrow, ncol = grid.shape
-    points = instantiatePoints(grid)
-    paths = instantiatePaths(nrow, ncol, points)
-    isMenuValid = False
-    
-    # while not isMenuValid:
-    #     menuInput = input("Enter menu selection: \n1 - Free travel (no constraints)\n2 - Travel with constraints\n")
-    #     try: 
-    #         menuN = int(menuInput)
-    #         if (menuN <= 0 or menuN > 2):
-    #             raise ValueError
-    #         else:
-    #             if menuN == 1:
-    #                 shopInput = freeTravel(points)
-    #                 print(shopInput)
-    #                 isMenuValid = True
-    #     except ValueError:
-    #         print("Please enter a valid selection")
-    
-    
-    
-    origin = points["Uniqlo"]
-    destination = points["Cotton On"]
-    
-    n_ant = 10
+def aco(points, paths, origin, destination, costs):
+    n_ant = 5 #initially was 10
     alpha = 1
     rho = 0.1
     initial_pheromone = 0.001
-
+    
     for path in paths:
         path.set_pheromone(initial_pheromone)
 
@@ -291,40 +244,187 @@ if __name__ == "__main__":
     percentage_of_dominant_road = 0.9
 
     iteration = 0
-    ax = create_graph(points)
-
-    lines = draw_pheromone(ax, paths)
+# =============================================================================
+#     ax = create_graph(points)
+#     lines = draw_pheromone(ax, paths)
+# =============================================================================
     while ((iteration < max_iteration) and (get_percentage_of_dominant_road(ants) < percentage_of_dominant_road)):
         print("Iteration: {0}\tPercentage: {1}".format(iteration, get_percentage_of_dominant_road(ants)))
         # looping through ants to find each ant's path
         for ant in ants:
-            # reset the path of the ant
             ant.reset()
-            # identify the path of the ant
             ant.get_road(origin, destination, alpha)
 
         # loop through all roads
         for path in paths:
-            # evaporate the pheromone on the road
             path.evaporate_pheromone(rho)
-            # deposit the pheromone
             path.deposit_pheromone(ants)
-        # visualise
-        for l in lines:
-            del l
-        lines = draw_pheromone(ax, paths)
-        plt.pause(2) # lower to make it faster
+# =============================================================================
+#         # visualise
+#         for l in lines:
+#             del l
+#         lines = draw_pheromone(ax, paths)
+#         plt.pause(2) # lower to make it faster
+# =============================================================================
         # increase iteration count
         iteration += 1
 
     # after exiting the loop, return the most occurred path as the solution
     [freq, roads, points_used] = get_frequency_of_roads(ants)
-    print([p.name for p in points_used[freq.index(max(freq))]])
+    travelRoute = [p.name for p in points_used[freq.index(max(freq))]]
     plt.show()
 
     cost = 0
     for g in roads:
         for r in g:
             cost += r.cost
-    print("path cost: {}".format(cost))
+    print(f"path cost: {cost}")
+    costs.append(cost)
+    return travelRoute
+
+
+def freeTravel(points, paths):
+    isInputValid = False 
+    print("\033[4mPlease enter at least 5 shops to visit:\033[0m")
+    print("*enter shop number separated by commas")
+    shops = [p for p, val in points.items() if val.category != "EE" and val.category != "-"]
+    for i, p in enumerate(shops):
+        print(f"{i} - {p}")
+        
+    while not isInputValid:
+        try:
+            inputString = set(map(int, input().split(",")))
+            assert len(inputString) >= 5
+            #stores selected Point object
+            selectedShops = [points[s] for i, s in enumerate(shops) if i in inputString]   
+            selectedShops.sort(key=lambda x: x.coordinates[0])
+            selectedShopNames = [s.name for s in selectedShops]
+            print("\n\033[4mSelected shops\033[0m")
+            for i in selectedShopNames:
+                print(i)
+            print("")
+            inFirstHalf = all(x.coordinates[0] <= 3 for x in selectedShops) #returns true or false
+            inSecondHalf = all(x.coordinates[0] >= 3 for x in selectedShops)
+            
+            travelRoute = []
+            costs = []
+            
+            if not inFirstHalf and not inSecondHalf: #in both halves - enter from A, exit from B - user travels from left to right of mall
+                entrance = points["Entrance / Exit A"]
+                ex = points["Entrance / Exit B"]
+            elif inFirstHalf:
+                entrance = points["Entrance / Exit A"]
+                ex = entrance
+            else:
+                entrance = points["Entrance / Exit B"]
+                ex = entrance
+            
+            nextNearest = selectedShops.pop(1)
+            selectedShops.append(nextNearest)
+            selectedShops.insert(0, entrance)
+            selectedShops.append(ex)
+            travelRoute = []
+            for i in range(len(selectedShops) - 1):
+                route = aco(points, paths, selectedShops[i], selectedShops[i+1], costs)
+                if i < (len(selectedShops) - 2):
+                    route.pop(-1)
+                travelRoute.extend(route)  
+   
+
+                         
+            isInputValid = True
+        except ValueError:
+                print("Please enter shop number only")
+        except AssertionError:
+            print("Please enter at least 5 shops\n")
+    
+    
+    return selectedShopNames, travelRoute, costs
+
+
+                
+
+if __name__ == "__main__":
+    plt.close('all')
+    grid = np.zeros([7,3])
+    nrow, ncol = grid.shape
+    points = instantiatePoints(grid)
+    paths = instantiatePaths(nrow, ncol, points)
+    isMenuValid = False
+    
+    while not isMenuValid:
+        menuInput = input("Enter menu selection: \n1 - Free travel (no constraints)\n2 - Travel with constraints\n")
+        try: 
+            menuN = int(menuInput)
+            if (menuN <= 0 or menuN > 2):
+                raise ValueError
+            else:
+                if menuN == 1:
+                    selectedShopNames, travelRoute, costs = freeTravel(points, paths)
+                    print("\nPath")
+                    print("~ ", end="")
+                    for p in travelRoute:
+                        if p in selectedShopNames:
+                            print(f"\033[4m{p}\033[0m", end=" ~ ")
+                        else:
+                            print(p, end=" ~ ")
+                    print("\n")
+                    print(f"Total Cost: {sum(x for x in costs)}")
+                        
+                    
+                    isMenuValid = True
+        except ValueError:
+            print("Please enter a valid selection")
+    
+# =============================================================================
+#     origin = points["Uniqlo"]
+#     destination = points["Cotton On"]
+#     
+#     n_ant = 5 #initially was 10
+#     alpha = 1
+#     rho = 0.1
+#     initial_pheromone = 0.001
+# 
+#     for path in paths:
+#         path.set_pheromone(initial_pheromone)
+# 
+#     ants = [Ant() for _ in range(n_ant)]
+# 
+#     # Termination criteria to end loop
+#     max_iteration = 100
+#     percentage_of_dominant_road = 0.9
+# 
+#     iteration = 0
+#     ax = create_graph(points)
+#     lines = draw_pheromone(ax, paths)
+#     while ((iteration < max_iteration) and (get_percentage_of_dominant_road(ants) < percentage_of_dominant_road)):
+#         print("Iteration: {0}\tPercentage: {1}".format(iteration, get_percentage_of_dominant_road(ants)))
+#         # looping through ants to find each ant's path
+#         for ant in ants:
+#             ant.reset()
+#             ant.get_road(origin, destination, alpha)
+# 
+#         # loop through all roads
+#         for path in paths:
+#             path.evaporate_pheromone(rho)
+#             path.deposit_pheromone(ants)
+#         # visualise
+#         for l in lines:
+#             del l
+#         lines = draw_pheromone(ax, paths)
+#         plt.pause(2) # lower to make it faster
+#         # increase iteration count
+#         iteration += 1
+# 
+#     # after exiting the loop, return the most occurred path as the solution
+#     [freq, roads, points_used] = get_frequency_of_roads(ants)
+#     print([p.name for p in points_used[freq.index(max(freq))]])
+#     plt.show()
+# 
+#     cost = 0
+#     for g in roads:
+#         for r in g:
+#             cost += r.cost
+#     print("path cost: {}".format(cost))
+# =============================================================================
 
