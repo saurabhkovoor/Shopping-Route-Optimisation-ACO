@@ -16,7 +16,7 @@ location_list = [  #arranged by row
     [2, 1, "2, 1", "-", ""],
     [3, 1, "Prada", "Clothing", "luxury"],
     [4, 1, "4, 1", "-", ""],
-    [5, 1, "Pets At Home", "Pet Shop", "Pet Shop"],
+    [5, 1, "Pets At Home", "Pet Shop", "pet"],
     [6, 1, "Entrance / Exit B", "EE", ""],
     [0, 2, "Borders Books", "Bookstore", ""],
     [1, 2, "1, 2", "-", ""],
@@ -41,6 +41,7 @@ def instantiatePaths(nrow, ncol, points):
     for x in range(nrow):
         for y in range(ncol):
             currentPoint = [i for i in points if points[i].coordinates[0] == x and points[i].coordinates[1] == y]
+            
             #nrow-1 and ncol-1 = avoid border Points
             if x < (nrow-1):    #Horizontal direction
                 nextHoriPoint = [i for i in points if points[i].coordinates[0] == x+1 and points[i].coordinates[1] == y]
@@ -71,6 +72,7 @@ def instantiatePaths(nrow, ncol, points):
                 paths.append(path)
     return paths
 
+# Function to draw paths or concentration of pheromone
 def draw_pheromone(ax, paths):
     lines = []
     for path in paths:
@@ -79,12 +81,12 @@ def draw_pheromone(ax, paths):
         coord_x = [from_coord[0], to_coord[0]]
         coord_y = [from_coord[1], to_coord[1]]
         lines.append(ax.plot(coord_x, coord_y, c='k',
-                     linewidth=path.pheromone**(1/5)))
+                     linewidth=path.pheromone**(1/10)))
     return lines
 
-
-class Point:  # need to check again because this might be class for points, and not all points are shops
-    def __init__(self, name, pheromone=0):  # add category
+# Class to instantiate points (including stores), its instance variables and methods
+class Point:
+    def __init__(self, name, pheromone=0):
         self.name = name
         self.paths = []
         self.coordinates = []
@@ -102,11 +104,8 @@ class Point:  # need to check again because this might be class for points, and 
     def add_path(self, path):
         if path not in self.paths:
             self.paths.append(path)
-            
-    # def calculate_cost(self, coordinates):
-    #     self.cost = math.hypot(self.coordinates[0] - coordinates[0], self.coordinates[1] - coordinates[1])
 
-
+# Class to instantiate paths around every possible path within the grid, its instance variables and methods
 class Path:
     def __init__(self, connected_points, cost=1, pheromone=0):
         self.connected_points = connected_points
@@ -119,7 +118,8 @@ class Path:
     # update the pheromone on the path
     def evaporate_pheromone(self, rho):
         self.pheromone *= (1-rho) * self.pheromone
-
+        
+    # function to deposit pheromones on the path
     def deposit_pheromone(self, ants):
         deposited_pheromone = 0
         for ant in ants:
@@ -130,12 +130,13 @@ class Path:
     def set_cost(self, cost):
         self.cost = cost
 
-
+# class to instantiate each ant, its instance variables and methods
 class Ant:
     def __init__(self):
         self.points = []  # the sequence of points that the ant goes through
         self.road = []  # the sequence of paths that the and utilises
-
+    
+    # function to determine the next chosen path, based on the amount of pheromones
     def get_road(self, origin, destination, alpha):
         # appending the origin point to the self.points
         self.points.append(origin)
@@ -144,8 +145,8 @@ class Ant:
         recent_point = self.points[-1]
         while recent_point != destination:
             connected_paths = recent_point.paths
-            pheromone_sum_w_alpha = sum([path.pheromone * alpha for path in connected_paths]) # can make this power of alpha
-            probabilities_ls = [(alpha * path.pheromone) / pheromone_sum_w_alpha for path in connected_paths]
+            pheromone_sum_w_alpha = sum([path.pheromone ** alpha for path in connected_paths])
+            probabilities_ls = [(alpha * path.pheromone) / pheromone_sum_w_alpha for path in connected_paths] # list of probabilities for the possible subsequent paths
             selectedPath = random.choices(population=connected_paths, weights=probabilities_ls)[0]
             if selectedPath.connected_points[0] == recent_point:
                 recent_point = selectedPath.connected_points[1]
@@ -176,7 +177,7 @@ class Ant:
         self.points = []
         self.road = []
 
-
+# function to return the proportion of ants on each road
 def get_frequency_of_roads(ants):
     roads = []
     points = []
@@ -200,6 +201,7 @@ def get_percentage_of_dominant_road(ants):
         percentage = max(frequencies)/sum(frequencies)
     return percentage
 
+# function to create graph for visualisation of the resultant path, as per the aco algorihtm
 def create_graph(points):
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
@@ -229,7 +231,8 @@ def create_graph(points):
     
     return ax
 
-def aco(points, paths, origin, destination, costs):
+# function that uses aco algorithm to find the shortest paths between the points and its associated total cost
+def aco(points, paths, origin, destination, costs, restrictedPaths = [], ax = []):
     n_ant = 5 #initially was 10
     alpha = 1
     rho = 0.1
@@ -245,13 +248,15 @@ def aco(points, paths, origin, destination, costs):
     percentage_of_dominant_road = 0.9
 
     iteration = 0
-# =============================================================================
-#     ax = create_graph(points)
-#     lines = draw_pheromone(ax, paths)
-# =============================================================================
+    # ax = create_graph(points)
+    # lines = draw_pheromone(ax, paths)
     while ((iteration < max_iteration) and (get_percentage_of_dominant_road(ants) < percentage_of_dominant_road)):
         print("Iteration: {0}\tPercentage: {1}".format(iteration, get_percentage_of_dominant_road(ants)))
         # looping through ants to find each ant's path
+        for r in restrictedPaths:
+            for rp in r:
+                rp.set_pheromone(0)
+                        
         for ant in ants:
             ant.reset()
             ant.get_road(origin, destination, alpha)
@@ -260,13 +265,11 @@ def aco(points, paths, origin, destination, costs):
         for path in paths:
             path.evaporate_pheromone(rho)
             path.deposit_pheromone(ants)
-# =============================================================================
-#         # visualise
-#         for l in lines:
-#             del l
-#         lines = draw_pheromone(ax, paths)
-#         plt.pause(2) # lower to make it faster
-# =============================================================================
+        # visualise
+        # for l in lines:
+        #     del l
+        # lines = draw_pheromone(ax, paths)
+        # plt.pause(2) # lower to make it faster
         # increase iteration count
         iteration += 1
 
@@ -274,16 +277,26 @@ def aco(points, paths, origin, destination, costs):
     [freq, roads, points_used] = get_frequency_of_roads(ants)
     travelRoute = [p.name for p in points_used[freq.index(max(freq))]]
     plt.show()
-
+    road = []
     cost = 0
     for g in roads:
         for r in g:
             cost += r.cost
+            road.append(r)
     print(f"path cost: {cost}")
     costs.append(cost)
+    draw_pheromone(ax, road)
     return travelRoute
 
-def validateInput():
+# function to display possible shop choices that the user can visit and accepts user input in the form of comma-separated numeric values
+def shopMenu(restriction = []):
+    print("\n\033[4mPlease enter at least 5 shops to visit:\033[0m")
+    print("*enter shop number separated by commas")
+    shops = [p for p, val in points.items() if val.category != "EE" and val.category != "-" and p not in restriction]
+        
+    for i, p in enumerate(shops):
+        print(f"{i} - {p}")
+        
     isInputValid = False 
     while not isInputValid:
         try: 
@@ -304,13 +317,14 @@ def validateInput():
             print("Please enter at least 5 shops\n")
     return selectedShops, selectedShopNames
 
+# Menu selection 1, free travel with no restrictions
 def freeTravel(points, paths):
-    selectedShops, selectedShopNames = validateInput()
+    selectedShops, selectedShopNames = shopMenu()
     inFirstHalf = all(x.coordinates[0] <= 3 for x in selectedShops) #returns true or false
     inSecondHalf = all(x.coordinates[0] >= 3 for x in selectedShops)
     travelRoute = []
     costs = []
-    
+    ax = create_graph(points)
     if not inFirstHalf and not inSecondHalf: #in both halves - enter from A, exit from B - user travels from left to right of mall
         entrance = points["Entrance / Exit A"]
         ex = points["Entrance / Exit B"]
@@ -330,7 +344,7 @@ def freeTravel(points, paths):
     selectedShops.append(ex)
     travelRoute = []
     for i in range(len(selectedShops) - 1):
-        route = aco(points, paths, selectedShops[i], selectedShops[i+1], costs)
+        route = aco(points, paths, selectedShops[i], selectedShops[i+1], costs, ax = ax)
         if i < (len(selectedShops) - 2):
             route.pop(-1)
         travelRoute.extend(route)  
@@ -369,8 +383,9 @@ def getClosestShop(availableShops, closestVal, prevNext):
             closestShop = s
     return closestShop
 
+# Menu selection 2, fixed entrance and exit choice (fixed to A or fixed to B)
 def fixedEntExit(points, paths):
-    selectedShops, selectedShopNames = validateInput()
+    selectedShops, selectedShopNames = shopMenu()
     print("\n\033[4mSelect one as your entrance and exit:\033[0m")
     print("*enter A or B")
     entranceExit = [e for e, val in points.items() if val.category == "EE"]
@@ -378,6 +393,7 @@ def fixedEntExit(points, paths):
         print(f"{e[-1]} - {e}")
     print("")
     isEntExitValid = False
+    ax = create_graph(points)
     while not isEntExitValid:
         eeInput = input()
         try:
@@ -400,8 +416,8 @@ def fixedEntExit(points, paths):
                 shopArrangement.insert(0, entExit)
                 shopArrangement.append(entExit)
                 travelRoute = []
-                for i in range(len(selectedShops) - 1):
-                    route = aco(points, paths, shopArrangement[i], shopArrangement[i+1], costs)
+                for i in range(len(shopArrangement) - 1):
+                    route = aco(points, paths, shopArrangement[i], shopArrangement[i+1], costs, ax = ax)
                     if i < (len(shopArrangement) - 2):
                         route.pop(-1)
                     travelRoute.extend(route)  
@@ -411,6 +427,74 @@ def fixedEntExit(points, paths):
             
     return selectedShopNames, travelRoute, costs
 
+# Menu selection 3, travelling with restrictions, avoiding landing on unwanted cells/shops
+def withRestrictions(points, paths):
+    print("\n\033[4mEnter any restriction in the generated path:\033[0m")
+    print("*enter 1-3 (separated by comma, if multiple)")
+    
+    restrictedShops = [p for p, val in points.items() if val.tag == "non-halal" or val.tag == "luxury" or val.tag == "pet"]
+    
+    for i, p in enumerate(restrictedShops):
+        print(f"{i} - {points[p].tag} shop")
+        
+    restrictValid = False
+    ax = create_graph(points)
+    while not restrictValid:
+        try:      
+            restriction = set(map(int, input().split(",")))
+            for val in restriction: 
+                if val not in [0,1,2]:
+                    raise ValueError
+            assert len(restriction) <= 3
+            
+            selectedRestrictions = [x for i, x in enumerate(restrictedShops) if i in restriction]
+            selectedShops, selectedShopNames = shopMenu(selectedRestrictions)
+            
+            inFirstHalf = all(x.coordinates[0] <= 3 for x in selectedShops) #returns true or false
+            inSecondHalf = all(x.coordinates[0] >= 3 for x in selectedShops)
+            costs = []
+            travelRoute = []
+            restrictedPaths = []
+            shops = [p for p, val in points.items() if val.category != "EE" and val.category != "-"]
+            
+            restrictedPaths = [points[x].paths for x in selectedRestrictions]
+            
+            
+            # determining entrance and exit from before
+            if not inFirstHalf and not inSecondHalf: #in both halves - enter from A, exit from B - user travels from left to right of mall
+                entrance = points["Entrance / Exit A"]
+                ex = points["Entrance / Exit B"]
+            elif inFirstHalf:
+                entrance = points["Entrance / Exit A"]  
+                ex = entrance
+                nextNearest = selectedShops.pop(1)
+                selectedShops.append(nextNearest)
+            else:   #inSecondHalf
+                entrance = points["Entrance / Exit B"]
+                ex = entrance
+                selectedShops.reverse()
+                nextNearest = selectedShops.pop(1)
+                selectedShops.append(nextNearest)
+            
+            selectedShops.insert(0, entrance)
+            selectedShops.append(ex)
+            
+            for i in range(len(selectedShops) - 1):
+                route = aco(points, paths, selectedShops[i], selectedShops[i+1], costs, restrictedPaths, ax)
+                
+                if i < (len(selectedShops) - 2):
+                    route.pop(-1)
+                travelRoute.extend(route)  
+                
+            restrictValid = True
+            return selectedShopNames, travelRoute, costs
+        
+        except ValueError:
+            print("Please enter restriction number only (1-3)\n")
+        except AssertionError:
+            print("Please enter at most 3 restrictions\n")
+    
+    
 if __name__ == "__main__":
     plt.close('all')
     grid = np.zeros([7,3])
@@ -425,13 +509,7 @@ if __name__ == "__main__":
             menuN = int(menuInput)
             if (menuN <= 0 or menuN > 3):
                 raise ValueError
-            else:
-                print("\n\033[4mPlease enter at least 5 shops to visit:\033[0m")
-                print("*enter shop number separated by commas")
-                shops = [p for p, val in points.items() if val.category != "EE" and val.category != "-"]
-                for i, p in enumerate(shops):
-                    print(f"{i} - {p}")
-                    
+            else:                    
                 if menuN == 1:
                     selectedShopNames, travelRoute, costs = freeTravel(points, paths)
                     print("\nPath")
@@ -455,6 +533,17 @@ if __name__ == "__main__":
                     print(f"Total Cost: {math.fsum(costs)}")
                     isMenuValid = True
                     
+                elif menuN == 3:
+                    selectedShopNames, travelRoute, costs = withRestrictions(points, paths)
+                    print("\nPath")
+                    for p in travelRoute:
+                        if p in selectedShopNames:
+                            print(f"\033[4m{p}\033[0m", end=" ~ ")
+                        else:
+                            print(p, end=" ~ ")
+                    print("")
+                    print(f"Total Cost: {math.fsum(costs)}")
+                    isMenuValid = True
+                    
         except ValueError:
             print("Please enter a valid selection\n")
-    
