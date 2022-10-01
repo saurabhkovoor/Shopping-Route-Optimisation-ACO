@@ -2,6 +2,8 @@ import functions as F
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+import time
+
 
 location_list = [  #arranged by row
     [0, 0, "Uniqlo", "Clothing", ""],
@@ -44,8 +46,9 @@ if __name__ == "__main__":
             else:                    
                 if menuN == 1:
                     selectedShops, selectedShopNames = F.shopMenu(points)
+                    start = time.time()
                     travelRoute, costs = F.travel(points, paths, selectedShops)
-                    
+                    end = time.time()
                     print("\nPath")
                     for p in travelRoute:
                         if p in selectedShopNames:
@@ -55,10 +58,11 @@ if __name__ == "__main__":
                     print("")
                     #rounding to 3 dp to avoid long float issue
                     print(f"Total Cost: {round(math.fsum(costs), 3)}")
+                    print(f"Program execution time: {round((end - start), 3)}s")
                     isMenuValid = True
                     
                 elif menuN == 2:
-                    selectedShopNames, travelRoute, costs = F.fixedEntExit(points, paths)
+                    selectedShopNames, travelRoute, costs, duration = F.fixedEntExit(points, paths)
                     
                     print("\nPath")
                     for p in travelRoute:
@@ -68,10 +72,11 @@ if __name__ == "__main__":
                             print(p, end=" ~ ")
                     print("")
                     print(f"Total Cost: {round(math.fsum(costs), 3)}")
+                    print(f"Program execution time: {round((duration), 3)}s")
                     isMenuValid = True
                     
                 else:
-                    selectedShopNames, travelRoute, costs = F.withRestrictions(points, paths)
+                    selectedShopNames, travelRoute, costs, duration = F.withRestrictions(points, paths)
                     
                     print("\nPath")
                     for p in travelRoute:
@@ -81,6 +86,7 @@ if __name__ == "__main__":
                             print(p, end=" ~ ")
                     print("")
                     print(f"Total Cost: {round(math.fsum(costs),3)}")
+                    print(f"Program execution time: {round((duration), 3)}s")
                     isMenuValid = True
                     
         except ValueError:

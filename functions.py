@@ -2,6 +2,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+import time
 
 # Class to instantiate points (including stores), its instance variables and methods
 class Point:
@@ -345,6 +346,7 @@ def fixedEntExit(points, paths):
             if (userInput.upper() not in ["A", "B"]):
                 raise ValueError 
             else:
+                start = time.time()
                 n = len(selectedShops)
                 rearrangedShops = [""]*n 
                 travelRoute = []
@@ -369,8 +371,9 @@ def fixedEntExit(points, paths):
                 isEntExitValid = True
         except ValueError:
             print("Please enter a valid selection\n")
-            
-    return selectedShopNames, travelRoute, costs
+    end = time.time()
+    duration = end - start        
+    return selectedShopNames, travelRoute, costs, duration
 
 def rearrange(n, selectedShops, rearrangedShops):
     for i in range(n):
@@ -433,10 +436,12 @@ def withRestrictions(points, paths):
             for i in selectedRestrictions:
                 print(i)
             print("")
-            
+            start = time.time()
             travelRoute, costs = travel(points, paths, selectedShops, restrictedPaths)
+            end = time.time()
+            duration = end - start
             isRestrictValid = True
-            return selectedShopNames, travelRoute, costs
+            return selectedShopNames, travelRoute, costs, duration
         
         except ValueError:
             print("Please enter a valid number\n")
