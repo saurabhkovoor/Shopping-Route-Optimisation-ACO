@@ -64,7 +64,7 @@ if __name__ == "__main__":
                 elif menuN == 2:
                     selectedShopNames, travelRoute, costs, duration = F.fixedEntExit(points, paths)
                     
-                    print("\nPath")
+                    print("\n\033[4mPath\033[0m")
                     for p in travelRoute:
                         if p in selectedShopNames:
                             print(f"\033[4m{p}\033[0m", end=" ~ ")

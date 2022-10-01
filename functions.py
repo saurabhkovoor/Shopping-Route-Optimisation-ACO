@@ -1,5 +1,4 @@
 import random
-import numpy as np
 import matplotlib.pyplot as plt
 import math
 import time
@@ -267,10 +266,11 @@ def aco(points, paths, origin, destination, costs, ax, restrictedPaths = []):
 def shopMenu(points, restriction = []):
     print("\n\033[4mPlease enter at least 5 shops to visit:\033[0m")
     print("*enter shop number separated by comma")
-    shops = [p for p, val in points.items() if val.category != "EE" and val.category != "-" and p not in restriction]
+    # Shop objects
+    shops = [points[p] for p in points if points[p].category != "EE" and points[p].category != "-" and points[p] not in restriction]
         
     for i, p in enumerate(shops):
-        print(f"{i} - {p}")
+        print(f"{i} - {p.name}")
         
     isInputValid = False 
     while not isInputValid:
@@ -280,7 +280,7 @@ def shopMenu(points, restriction = []):
                 raise ValueError
             assert len(inputString) >= 5
             #stores selected Point object
-            selectedShops = [points[s] for i, s in enumerate(shops) if i in inputString]   
+            selectedShops = [s for i, s in enumerate(shops) if i in inputString]   
             selectedShops.sort(key=lambda x: x.coordinates[0])
             selectedShopNames = [s.name for s in selectedShops]
             print("\n\033[4mSelected shops\033[0m")
@@ -293,6 +293,7 @@ def shopMenu(points, restriction = []):
         except AssertionError:
             print("Please enter at least 5 shops\n")
     return selectedShops, selectedShopNames
+
 
 def travel(points, paths, selectedShops, restrictedPaths = []):
     inFirstHalf = all(x.coordinates[0] <= 3 for x in selectedShops) #returns true or false
@@ -332,7 +333,7 @@ def travel(points, paths, selectedShops, restrictedPaths = []):
 # =============================================================================
 def fixedEntExit(points, paths):
     selectedShops, selectedShopNames = shopMenu(points)
-    print("\n\033[4mSelect one as your entrance and exit:\033[0m")
+    print("\033[4mSelect one as your entrance and exit:\033[0m")
     print("*enter A or B")
     entranceExit = [e for e, val in points.items() if val.category == "EE"]
     for e in entranceExit:
@@ -367,12 +368,13 @@ def fixedEntExit(points, paths):
                     route = aco(points, paths, shopArrangement[i], shopArrangement[i+1], costs, ax)
                     if i < (len(shopArrangement) - 2):
                         route.pop(-1)
-                    travelRoute.extend(route)  
+                    travelRoute.extend(route) 
                 isEntExitValid = True
         except ValueError:
             print("Please enter a valid selection\n")
+            
     end = time.time()
-    duration = end - start        
+    duration = end - start         
     return selectedShopNames, travelRoute, costs, duration
 
 def rearrange(n, selectedShops, rearrangedShops):
@@ -414,10 +416,11 @@ def withRestrictions(points, paths):
     print("\n\033[4mEnter shops to avoid while travelling:\033[0m")
     print("*enter selection (separated by comma, if multiple)")
     
-    restrictedShops = [p for p, val in points.items() if val.tag != ""]
+    # restricted shop objects
+    restrictedShops = [points[p] for p in points if points[p].tag != ""]
     
     for i, p in enumerate(restrictedShops):
-        print(f"{i} - {points[p].tag}")
+        print(f"{i} - {p.tag}")
         
     isRestrictValid = False
     while not isRestrictValid:
@@ -428,14 +431,15 @@ def withRestrictions(points, paths):
             assert len(restriction) <= 3
             
             selectedRestrictions = [x for i, x in enumerate(restrictedShops) if i in restriction]
-            restrictedPaths = [points[x].paths for x in selectedRestrictions]
+            restrictedPaths = [x.paths for x in selectedRestrictions]
             
             selectedShops, selectedShopNames = shopMenu(points, selectedRestrictions)
             
             print("\033[4mAvoided shops\033[0m")
             for i in selectedRestrictions:
-                print(i)
+                print(f"{i.name} - {i.tag}")
             print("")
+            
             start = time.time()
             travelRoute, costs = travel(points, paths, selectedShops, restrictedPaths)
             end = time.time()
