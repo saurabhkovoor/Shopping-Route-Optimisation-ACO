@@ -49,7 +49,7 @@ if __name__ == "__main__":
                     start = time.time()
                     travelRoute, costs = F.travel(points, paths, selectedShops)
                     end = time.time()
-                    print("\nPath")
+                    print("\n\033[4mPath\033[0m")
                     for p in travelRoute:
                         if p in selectedShopNames:
                             print(f"\033[4m{p}\033[0m", end=" ~ ")
@@ -78,7 +78,7 @@ if __name__ == "__main__":
                 else:
                     selectedShopNames, travelRoute, costs, duration = F.withRestrictions(points, paths)
                     
-                    print("\nPath")
+                    print("\n\033[4mPath\033[0m")
                     for p in travelRoute:
                         if p in selectedShopNames:
                             print(f"\033[4m{p}\033[0m", end=" ~ ")
