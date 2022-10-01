@@ -428,7 +428,6 @@ def withRestrictions(points, paths):
             restriction = set(map(int, input().split(",")))
             if not all(x >= 0 and x < len(restrictedShops) for x in restriction):
                 raise ValueError
-            assert len(restriction) <= 3
             
             selectedRestrictions = [x for i, x in enumerate(restrictedShops) if i in restriction]
             restrictedPaths = [x.paths for x in selectedRestrictions]
@@ -449,6 +448,4 @@ def withRestrictions(points, paths):
         
         except ValueError:
             print("Please enter a valid number\n")
-        except AssertionError:
-            print("Please enter at most 3 restrictions\n")
     
